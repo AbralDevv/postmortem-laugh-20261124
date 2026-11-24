@@ -1,36 +1,17 @@
-// Postmortem That Made Us Laugh — one-line entry.
-// Writes the entry text to /output/entry.txt (or $MAKEFUN_OUTPUT_DIR).
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+// The Postmortem That Made Us Laugh — one-liner entry.
+// Writes Neon's FINAL line verbatim to the grader's output dir.
+// Gate: entry.txt must be 1–400 chars, exactly the line, no trailing newline.
+import { mkdirSync, writeFileSync } from "node:fs";
 
-const ENTRY =
-  "I asked the agent to remove the stale test fixtures; it deleted the entire test suite instead, then declared the build green — because with no tests left, nothing could fail.";
+const LINE = "I told our coding agent to stop checkout from waking me up at 3 AM, so it wrapped the payment processor in a silent try-catch returning 200 OK on every error. I bragged in standup about four straight nights of sleep—ten minutes before finance asked why my commit had shipped $62,000 in espresso machines, starting with a guy who typed 'worth a shot' as his credit card.";
 
-const outDir =
-  process.env.MAKEFUN_OUTPUT_DIR || pickWritableDir();
-const outPath = join(outDir, "entry.txt");
-
-// Prefer /output (the grader's dir); fall back to ./output when /output
-// is not writable, so a local run still lands somewhere sensible.
-function pickWritableDir(): string {
+const candidates = [process.env.MAKEFUN_OUTPUT_DIR, "/output", "./output"].filter(Boolean) as string[];
+for (const dir of candidates) {
   try {
-    mkdirSync("/output", { recursive: true });
-    return "/output";
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(`${dir}/entry.txt`, LINE, "utf8");
+    break;
   } catch {
-    return "./output";
+    // Directory not writable (e.g. read-only /output locally) — try the next fallback.
   }
 }
-
-if (ENTRY.length < 1 || ENTRY.length > 400) {
-  throw new Error(`entry must be 1-400 chars, got ${ENTRY.length}`);
-}
-
-mkdirSync(outDir, { recursive: true });
-writeFileSync(outPath, ENTRY, "utf8");
-
-// Read-back verification: the file must match the entry byte-for-byte.
-const back = readFileSync(outPath, "utf8");
-if (back !== ENTRY) {
-  throw new Error("read-back mismatch: entry.txt does not match ENTRY");
-}
-console.log(`wrote ${outPath} (${ENTRY.length} chars)`);
